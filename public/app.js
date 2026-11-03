@@ -690,8 +690,52 @@ function bindDashboard() {
   });
 }
 
+const SUN_ICON =
+  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/></svg>';
+const MOON_ICON =
+  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M20.5 14.6A8.6 8.6 0 0 1 9.4 3.5a7.2 7.2 0 1 0 11.1 11.1z"/></svg>';
+
 function bindDrawer() {
   const drawer = $('#drawer');
+  const theme = window.LiziTheme;
+
+  const syncThemeUI = () => {
+    if (!theme) return;
+    const current = theme.get();
+    document.querySelectorAll('[data-theme-val]').forEach((btn) => {
+      btn.setAttribute('aria-pressed', String(btn.dataset.themeVal === current.theme));
+    });
+    document.querySelectorAll('[data-bg-val]').forEach((btn) => {
+      btn.setAttribute('aria-pressed', String(btn.dataset.bgVal === current.bg));
+    });
+    const toggle = $('#btn-theme');
+    if (toggle) {
+      toggle.innerHTML = current.theme === 'day' ? MOON_ICON : SUN_ICON;
+      toggle.title = current.theme === 'day' ? '切换到夜晚' : '切换到白天';
+      toggle.setAttribute('aria-label', toggle.title);
+    }
+  };
+  syncThemeUI();
+
+  if (theme) {
+    $('#btn-theme').addEventListener('click', () => {
+      const current = theme.get();
+      theme.set({ theme: current.theme === 'day' ? 'night' : 'day' });
+      syncThemeUI();
+    });
+    $('#theme-seg').addEventListener('click', (event) => {
+      const btn = event.target.closest('[data-theme-val]');
+      if (!btn) return;
+      theme.set({ theme: btn.dataset.themeVal });
+      syncThemeUI();
+    });
+    $('#bg-choices').addEventListener('click', (event) => {
+      const btn = event.target.closest('[data-bg-val]');
+      if (!btn) return;
+      theme.set({ bg: btn.dataset.bgVal });
+      syncThemeUI();
+    });
+  }
 
   const applyLan = (s) => {
     const urls = (s && s.lanUrls) || [];

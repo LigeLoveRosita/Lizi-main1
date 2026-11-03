@@ -21,6 +21,7 @@ const PORT = Number(process.env.PORT || 8899);
 const HOST = process.env.HOST || '127.0.0.1';
 const LAN_MODE = HOST !== '127.0.0.1' && HOST !== 'localhost';
 const DEMO = process.argv.includes('--demo') || process.env.VRCW_DEMO === '1';
+const TRUST_PROXY = /^(1|true|yes)$/i.test(String(process.env.TRUST_PROXY || ''));
 const API_BASE = process.env.VRC_API_BASE || DEFAULT_BASE;
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const DATA_DIR = process.env.VRCW_DATA_DIR ? path.resolve(process.env.VRCW_DATA_DIR) : path.join(__dirname, 'data');
@@ -72,6 +73,17 @@ function lanAddresses() {
 function isLoopback(remote) {
   const addr = String(remote || '').replace(/^::ffff:/, '');
   return addr === '127.0.0.1' || addr === '::1' || addr === '';
+}
+
+/** 放在 nginx 等反代后面时，用 X-Forwarded-For 里的真实 IP 判断设备是否需要访问码 */
+function clientIp(req) {
+  if (TRUST_PROXY) {
+    const forwarded = String(req.headers['x-forwarded-for'] || '')
+      .split(',')[0]
+      .trim();
+    if (forwarded) return forwarded.replace(/^::ffff:/, '');
+  }
+  return String(req.socket.remoteAddress || '').replace(/^::ffff:/, '');
 }
 
 function accessKeyFromRequest(req) {
@@ -675,9 +687,8 @@ const server = http.createServer((req, res) => {
   req.on('error', () => {});
 
   // ---- 局域网设备访问控制：只有本机免访问码 ----
-  const remote = req.socket.remoteAddress;
-  const remoteIp = String(remote || '').replace(/^::ffff:/, '');
-  if (!isLoopback(remote)) {
+  const remoteIp = clientIp(req);
+  if (!isLoopback(remoteIp)) {
     if (state.settings.lanEnabled === false) {
       res.writeHead(403, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       res.end(blockedPage());

@@ -1,0 +1,19 @@
+services:
+  lizi-watch:
+    build: .
+    image: lizi-watch:latest
+    container_name: lizi-watch
+    restart: unless-stopped
+    ports:
+      - "8899:8899"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8899
+      # 服务器直连不了 VRChat 时，填本地/上游代理
+      # HTTPS_PROXY: http://127.0.0.1:7890
+      # 放在 nginx 后面时打开，才能正确识别真实客户端 IP
+      # TRUST_PROXY: "1"
+    volumes:
+      - ./data:/app/data
+    # 2C2G 也够用，这里只是给个兜底上限
+    mem_limit: 512m

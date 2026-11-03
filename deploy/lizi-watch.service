@@ -1,0 +1,35 @@
+# /etc/systemd/system/lizi-watch.service
+#
+# 安装：
+#   sudo useradd -r -s /usr/sbin/nologin lizi
+#   sudo mkdir -p /opt/lizi && sudo chown -R lizi:lizi /opt/lizi
+#   # 把项目文件放进 /opt/lizi
+#   sudo systemctl daemon-reload && sudo systemctl enable --now lizi-watch
+#
+# 日志：journalctl -u lizi-watch -f
+
+[Unit]
+Description=Lizi VRC friend watch
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=lizi
+WorkingDirectory=/opt/lizi
+ExecStart=/usr/bin/node server.js
+Environment=NODE_ENV=production
+# 只让本机访问，由 nginx 反代；如果直接对外暴露就改成 0.0.0.0
+Environment=HOST=127.0.0.1
+Environment=PORT=8899
+# 通过 nginx 反代时打开，用于按真实 IP 校验访问码
+# Environment=TRUST_PROXY=1
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/lizi/data
+
+[Install]
+WantedBy=multi-user.target

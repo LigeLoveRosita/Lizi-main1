@@ -19,6 +19,20 @@
 - **同世界提醒**：好友和你在同一个实例时，卡片会亮出「同世界」标签。
 - **筛选与搜索**：在线 / 全部 / 关注 / 离线四个分栏，可按名字、世界、签名搜索。
 - **深色界面**：自适应手机、平板、桌面，手机可「添加到主屏幕」当 App 用。
+- **白天 / 夜晚**：右上角一键切换，设置里还能选「极光 / 深海 / 樱雾 / 纯色」四种背景，只保存在本机。
+
+---
+
+## 外观
+
+| 白天 | 夜晚 |
+| --- | --- |
+| ![白天](preview-day.png) | ![夜晚](preview.png) |
+
+- 右上角的 ☀ / ☾ 按钮切换白天夜晚；
+- 设置 → 外观 里可以换背景：极光（默认）、深海、樱雾、纯色；
+- 主题存在浏览器 `localStorage`，每台设备可以不一样，也可以直接用 `?theme=day&bg=sakura` 分享链接；
+- 跟随系统？没有做自动跟随，因为夜间深色是这个界面的主要形态，默认就是夜晚。
 
 ---
 
@@ -41,6 +55,67 @@ node server.js --demo
 ```
 
 > 服务默认只监听 `127.0.0.1`，只有本机能访问。
+
+---
+
+## 部署到云服务器
+
+一个 Node 进程、无数据库、无第三方依赖。**2 核 2G 完全够用**，1 核 512M 也能跑：
+
+| 指标 | 实际占用 |
+| --- | --- |
+| 常驻内存 | 约 60–80 MB（纯 Node 进程） |
+| CPU | 基本空闲，只有轮询时的少量 JSON 解析 |
+| 磁盘 | 代码 + 依赖不到 1 MB，`data/` 只有几 KB 到几 MB |
+| 带宽 | 每轮同步 4 个请求，流量可忽略；头像走本机代理，缓存 1 小时 |
+
+真正影响体验的是**服务器到 `api.vrchat.cloud` 的网络延迟**，不是机器配置。
+
+### 网络要求（关键）
+
+- 服务器要能直连 `api.vrchat.cloud`：香港 / 日本 / 新加坡 / 美西节点都可以；
+- 大陆机房一般连不上，需要在服务器上跑代理，然后 `HTTPS_PROXY=http://127.0.0.1:7890` 启动；
+- 判断方法：`curl -s -o /dev/null -w "%{http_code}" https://api.vrchat.cloud/api/1/config`，返回 200 就行。
+
+### 方式一：systemd（直连）
+
+```bash
+sudo apt install -y nodejs          # 需要 18+
+sudo mkdir -p /opt/lizi && sudo chown $USER /opt/lizi
+git clone https://github.com/LigeLoveRosita/Lizi-main1.git /opt/lizi
+cd /opt/lizi && node server.js      # 先手动跑一次，确认能启动
+sudo cp deploy/lizi-watch.service /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable --now lizi-watch
+journalctl -u lizi-watch -f
+```
+
+### 方式二：Docker Compose
+
+```bash
+docker compose up -d --build
+docker logs -f lizi-watch
+```
+
+`docker-compose.yml` 已经把 `data/` 挂到宿主机，重启不丢登录状态。
+
+### 反向代理 + HTTPS（公网必备）
+
+公网必须上 HTTPS，否则登录 Cookie 和访问码都是明文。示例见 `deploy/nginx.conf.example`：
+
+```bash
+sudo cp deploy/nginx.conf.example /etc/nginx/conf.d/lizi-watch.conf
+sudo certbot --nginx -d 你的域名
+```
+
+- 服务监听 `127.0.0.1:8899`，由 nginx 反代；
+- **记得给服务加 `TRUST_PROXY=1`**，否则所有请求都会被当成"本机"，设备访问码就失效了；
+- 还可以在 nginx 里再加一层 `auth_basic`，和 App 内的访问码双保险。
+
+### 安全提醒
+
+- 公网访问会要求输入设备访问码（控制台和设置里都能看到），连续输错 8 次封 10 分钟；
+- `data/` 里是加密后的 VRChat 会话和密钥，定期备份，别提交到公开仓库；
+- 建议只给自己用，不要做多租户。
 
 ---
 
