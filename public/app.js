@@ -242,7 +242,7 @@ function applyState(data) {
   maybeNotify(data);
 
   const online = data.friends.filter((f) => f.online).length;
-  document.title = online ? `(${online}) VRC 好友雷达` : 'VRC 好友雷达';
+  document.title = online ? `(${online}) 李子视奸朋友的网站` : '李子视奸朋友的网站';
 }
 
 function avatarHtml(item, size = '') {

@@ -1,8 +1,8 @@
 {
-  "name": "vrc-friend-radar",
+  "name": "lizi-friend-watch",
   "version": "1.0.0",
   "private": true,
-  "description": "本地运行的 VRChat 好友状态雷达：好友在线 / 所在世界 / 状态签名实时监控",
+  "description": "李子视奸朋友的网站：VRChat 好友在线 / 所在世界 / 状态签名实时看板",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

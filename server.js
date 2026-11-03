@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * VRC 好友雷达 —— 本地服务
+ * 李子视奸朋友的网站 —— 本地服务
  * 仅监听 127.0.0.1，所有 VRChat 请求由本机代理转发。
  */
 
@@ -103,7 +103,7 @@ function noteAccessFailure(ip) {
 function gatePage(message) {
   return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>需要访问码 · VRC 雷达</title>
+<title>需要访问码 · 李子视奸</title>
 <style>
   :root{color-scheme:dark}
   body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(900px 500px at 50% -10%,rgba(124,92,255,.25),transparent 60%),#070911;color:#e9edf9;font-family:"Segoe UI","Microsoft YaHei",system-ui,sans-serif;padding:24px}
@@ -749,7 +749,7 @@ server.listen(PORT, HOST, () => {
   const url = `http://${HOST === '0.0.0.0' ? '127.0.0.1' : HOST}:${PORT}`;
   const lan = lanAddresses();
   console.log('');
-  console.log('  VRC 好友雷达已启动');
+  console.log('  李子视奸朋友的网站 已启动');
   if (DEMO) console.log('  模式：演示数据（不会访问 VRChat）');
   console.log(`  本机：${url}`);
   if (LAN_MODE) {
