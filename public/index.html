@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#070911" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="VRC 雷达" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>VRC 好友雷达</title>
+  <link rel="icon" href="/favicon.svg" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="aurora" aria-hidden="true"></div>
+
+  <!-- ============================ 登录 ============================ -->
+  <section id="login" class="login" hidden>
+    <div class="login-card">
+      <div class="brandline">
+        <span class="radar" aria-hidden="true"><i></i></span>
+        <span class="brand-name">VRC<span>雷达</span></span>
+      </div>
+      <h1>谁还在线？</h1>      <p class="lede">登录 VRChat 账号，实时掌握好友的在线状态、所在世界与状态签名。</p>
+
+      <p id="login-error" class="error" hidden></p>
+
+      <form id="login-form" class="stack" autocomplete="on">
+        <label class="field">
+          <span>用户名 / 邮箱</span>
+          <input name="username" autocomplete="username" required placeholder="VRChat 用户名" spellcheck="false" />
+        </label>
+        <label class="field">
+          <span>密码</span>
+          <input name="password" type="password" autocomplete="current-password" required placeholder="输入密码" />
+        </label>
+        <button class="btn primary" type="submit">登录</button>
+      </form>
+
+      <form id="twofa-form" class="stack" hidden>
+        <p class="hint">该账号开启了两步验证，请输入 <b id="twofa-hint">动态验证码</b></p>
+        <div id="twofa-methods" class="methods"></div>
+        <label class="field">
+          <span>验证码</span>
+          <input name="code" inputmode="numeric" autocomplete="one-time-code" placeholder="6 位数字" required />
+        </label>
+        <p class="hint small">验证码 30 秒刷新一次。若一直提示错误：确认设备时间准确，或改用「恢复代码」。</p>
+        <button class="btn primary" type="submit">验证并进入</button>
+        <button class="btn ghost" type="button" id="twofa-back">返回重新登录</button>
+      </form>
+
+      <details class="alt">
+        <summary>用 auth Cookie 登录</summary>
+        <form id="cookie-form" class="stack">
+          <label class="field">
+            <span>Cookie</span>
+            <textarea name="cookie" rows="3" placeholder="auth=xxxxxxxx（也可以直接粘贴 Cookie 值）" spellcheck="false"></textarea>
+          </label>
+          <button class="btn" type="submit">使用 Cookie 登录</button>
+        </form>
+      </details>
+
+      <p class="fineprint">仅在本机运行 · 密码不会被保存 · 登录 Cookie 使用 AES-256-GCM 加密落盘</p>
+    </div>
+    <p class="login-foot">非官方第三方工具 · 数据来自 VRChat Web API</p>
+  </section>
+
+  <!-- ============================ 主界面 ============================ -->
+  <div id="app" class="app" hidden>
+    <header class="topbar">
+      <div class="brandline small">
+        <span class="radar" aria-hidden="true"><i></i></span>
+        <span class="brand-name">VRC<span>雷达</span></span>
+      </div>
+
+      <div id="self-chip" class="self-chip"></div>
+
+      <div class="topbar-right">
+        <span id="demo-badge" class="badge demo" hidden>演示模式</span>
+        <span id="sync-state" class="sync-state"></span>
+        <button class="btn icon" id="btn-sync" title="立即同步" aria-label="立即同步">↻</button>
+        <button class="btn icon" id="btn-settings" title="设置" aria-label="设置">⚙</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="main">
+        <div id="summary" class="summary"></div>
+        <div id="banner" class="banner" hidden></div>
+
+        <div class="toolbar">
+          <div class="tabs" id="tabs">
+            <button class="tab active" data-tab="online">在线</button>
+            <button class="tab" data-tab="all">全部</button>
+            <button class="tab" data-tab="watch">关注</button>
+            <button class="tab" data-tab="offline">离线</button>
+          </div>
+          <div class="tools">
+            <input id="search" class="search" type="search" placeholder="搜索好友 / 世界 / 签名" spellcheck="false" />
+            <select id="sort" class="select">
+              <option value="status">按状态</option>
+              <option value="recent">最近活跃</option>
+              <option value="name">按名字</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="grid" class="grid"></div>
+        <div id="empty" class="grid-empty" hidden></div>
+      </section>
+
+      <aside class="rail">
+        <div class="rail-head">
+          <h2>好友动态</h2>
+          <span id="rail-count" class="rail-count"></span>
+        </div>
+        <ol id="timeline" class="timeline"></ol>
+        <p id="rail-empty" class="rail-empty">还没有捕捉到动态，等好友上线吧。</p>
+      </aside>
+    </main>
+  </div>
+
+  <!-- ============================ 设置抽屉 ============================ -->
+  <div id="drawer" class="drawer" hidden>
+    <div class="drawer-scrim" data-close="1"></div>
+    <div class="drawer-panel" role="dialog" aria-label="设置">
+      <header class="drawer-head">
+        <h2>设置</h2>
+        <button class="btn icon" id="drawer-close" aria-label="关闭">✕</button>
+      </header>
+
+      <div class="drawer-body">
+        <section class="set-group">
+          <h3>账号</h3>
+          <div id="drawer-account" class="drawer-account"></div>
+          <button class="btn" id="btn-logout">退出登录</button>
+        </section>
+
+        <section class="set-group">
+          <h3>同步</h3>
+          <label class="field inline">
+            <span>轮询间隔（秒）</span>
+            <input id="set-poll" type="number" min="20" max="900" step="5" />
+          </label>
+          <label class="field inline">
+            <span>详情缓存（秒）</span>
+            <input id="set-refresh" type="number" min="30" max="3600" step="10" />
+          </label>
+          <label class="field inline">
+            <span>关注好友上线时通知</span>
+            <input id="set-notify" type="checkbox" />
+          </label>
+          <p class="note">间隔越短越及时，但请求也越频繁。默认 60 秒足够用。</p>
+        </section>
+
+        <section class="set-group">
+          <h3>网络</h3>
+          <label class="field">
+            <span>HTTP 代理（可选）</span>
+            <input id="set-proxy" placeholder="http://127.0.0.1:7890" spellcheck="false" />
+          </label>
+          <p class="note">如果登录时报「连接超时」，说明你的网络无法直连 VRChat API，填上本地代理即可。</p>
+        </section>
+
+        <section class="set-group" id="sec-lan" hidden>
+          <h3>设备与局域网</h3>
+          <div class="lan-box">
+            <div class="lan-row">
+              <span class="lan-label">访问地址</span>
+              <div class="lan-value" id="lan-urls"></div>
+            </div>
+            <div class="lan-row">
+              <span class="lan-label">访问码</span>
+              <div class="lan-value">
+                <code id="lan-key">—</code>
+                <button class="btn tiny" id="btn-copy-key" type="button">复制</button>
+              </div>
+            </div>
+          </div>
+          <label class="field inline">
+            <span>允许局域网设备访问</span>
+            <input id="set-lan" type="checkbox" />
+          </label>
+          <p class="note">
+            手机 / 平板和电脑连同一个 Wi-Fi，用浏览器打开上面的地址、输入访问码即可（每台设备只需一次）。
+            手机浏览器菜单里「添加到主屏幕」可以像 App 一样打开。
+          </p>
+          <button class="btn" id="btn-reset-key" type="button">重置访问码</button>
+        </section>
+
+        <section class="set-group">
+          <h3>数据</h3>
+          <button class="btn" id="btn-reset">清空好友缓存与动态</button>
+          <button class="btn danger" id="btn-forget">删除本机数据并退出</button>
+        </section>
+
+        <section class="set-group">
+          <h3>关于</h3>
+          <p class="note">
+            本工具只读取你账号本来就能看到的好友状态（与 VRChat 网页端一致），数据全部保存在本机
+            <code>data/state.json</code>，不会上传到任何服务器。请勿将它公开部署到公网。
+          </p>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+  <script src="/app.js"></script>
+</body>
+</html>

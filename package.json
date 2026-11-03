@@ -1,0 +1,15 @@
+{
+  "name": "vrc-friend-radar",
+  "version": "1.0.0",
+  "private": true,
+  "description": "本地运行的 VRChat 好友状态雷达：好友在线 / 所在世界 / 状态签名实时监控",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "demo": "node server.js --demo",
+    "test": "node test-api.js && node test-tracker.js"
+  },
+  "engines": {
+    "node": ">=18.17"
+  }
+}
